@@ -15,7 +15,7 @@ button.TextColor3=Color3.fromRGB(180,235,255)
 button.BackgroundColor3=Color3.fromRGB(15,22,30)
 button.Parent=gui
 Instance.new("UICorner",button).CornerRadius=UDim.new(0,9)
-local character,humanoid,root,attachment,velocity,orientation,wings
+local character,humanoid,root,attachment,velocity,orientation,wings,steve
 local flying=false
 local speed=35
 local function stop()
@@ -65,6 +65,56 @@ local function makeWings()
   end
  end
 end
+
+-- Client-side Steve-inspired block skin, assembled without external Asset IDs.
+local function makeSteve()
+ if steve then steve:Destroy() end
+ steve=Instance.new("Model"); steve.Name="StevePixelSkin"; steve.Parent=character
+ local palette={
+  head=Color3.fromRGB(165,116,83),
+  torso=Color3.fromRGB(30,174,186),
+  arm=Color3.fromRGB(168,118,86),
+  leg=Color3.fromRGB(47,48,151)
+ }
+ local pieces={
+  {{"Head"}, "head"},
+  {{"UpperTorso","Torso"}, "torso"},
+  {{"LeftUpperArm","Left Arm"}, "arm"},
+  {{"RightUpperArm","Right Arm"}, "arm"},
+  {{"LeftUpperLeg","Left Leg"}, "leg"},
+  {{"RightUpperLeg","Right Leg"}, "leg"}
+ }
+ for _,entry in ipairs(pieces) do
+  local limb
+  for _,name in ipairs(entry[1]) do limb=character:FindFirstChild(name); if limb then break end end
+  if limb and limb:IsA("BasePart") then
+   limb.LocalTransparencyModifier=1
+   local shell=Instance.new("Part")
+   shell.Name="Steve_"..limb.Name; shell.Size=limb.Size+Vector3.new(0.03,0.03,0.03)
+   shell.Color=palette[entry[2]]; shell.Material=Enum.Material.SmoothPlastic
+   shell.CanCollide=false; shell.CanTouch=false; shell.Massless=true
+   shell.CFrame=limb.CFrame; shell.Parent=steve
+   local weld=Instance.new("WeldConstraint",shell); weld.Part0=limb; weld.Part1=shell
+   if entry[2]=="head" then
+    for _,side in ipairs({-1,1}) do
+     local eye=Instance.new("Part")
+     eye.Size=Vector3.new(0.19,0.17,0.025)
+     eye.Color=Color3.fromRGB(238,238,238)
+     eye.CanCollide=false; eye.Massless=true
+     eye.CFrame=limb.CFrame*CFrame.new(side*0.22,0.06,-limb.Size.Z/2-0.035)
+     eye.Parent=steve
+     local ew=Instance.new("WeldConstraint",eye); ew.Part0=limb; ew.Part1=eye
+     local pupil=Instance.new("Part")
+     pupil.Size=Vector3.new(0.075,0.11,0.028); pupil.Color=Color3.fromRGB(43,61,159)
+     pupil.CanCollide=false; pupil.Massless=true
+     pupil.CFrame=eye.CFrame*CFrame.new(0,0,-0.028); pupil.Parent=steve
+     local pw=Instance.new("WeldConstraint",pupil); pw.Part0=eye; pw.Part1=pupil
+    end
+   end
+  end
+ end
+end
+
 local function start()
  if flying or not root or not humanoid or humanoid.Health<=0 then return end
  -- Take off from the ground as well as in midair.
@@ -84,13 +134,15 @@ local function toggle() if flying then stop() else start() end end
 button.Activated:Connect(toggle)
 UIS.InputBegan:Connect(function(input,processed)
  if processed then return end
- if input.KeyCode==Enum.KeyCode.Space and humanoid and humanoid.FloorMaterial==Enum.Material.Air then toggle() end
+ if input.KeyCode==Enum.KeyCode.Space and humanoid then toggle() end
 end)
 local function setup(c)
- stop(); character=c
+ stop(); if steve then steve:Destroy(); steve=nil end
+ character=c
  humanoid=c:WaitForChild("Humanoid")
  root=c:WaitForChild("HumanoidRootPart")
  humanoid.Died:Connect(stop)
+ makeSteve()
 end
 player.CharacterAdded:Connect(setup)
 if player.Character then setup(player.Character) end
