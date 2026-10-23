@@ -84,6 +84,13 @@ RunService.RenderStepped:Connect(function(dt)
  local direction=look+move*0.45
  if direction.Magnitude<0.01 then direction=look end
  direction=direction.Unit
- velocity.VectorVelocity=direction*speed+Vector3.new(0,-3,0)
+ -- Camera up = climb, camera down = dive. Keep enough lift to gain height.
+ local vertical = math.clamp(look.Y * speed * 1.25, -90, 70)
+ if look.Y > 0.12 then
+  vertical = math.max(vertical, 12 + look.Y * 30)
+ end
+ local horizontal = Vector3.new(direction.X,0,direction.Z)
+ if horizontal.Magnitude > 0.01 then horizontal = horizontal.Unit else horizontal = Vector3.zero end
+ velocity.VectorVelocity = horizontal * speed * math.max(0.35, 1-math.abs(look.Y)*0.4) + Vector3.new(0,vertical,0)
  orientation.CFrame=CFrame.lookAt(Vector3.zero,direction)*CFrame.Angles(math.rad(-65),0,0)
 end)
