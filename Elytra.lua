@@ -35,6 +35,36 @@ local function pixel(parent,size,offset,color)
  local w=Instance.new("WeldConstraint",p); w.Part0=parent; w.Part1=p
  return p
 end
+
+-- Cross-platform pixel texture: Roblox EditableImage (when permitted).
+-- Falls back to physical pixel blocks on restricted iOS/Android executors.
+local function tryPixelTexture(wing)
+ local ok, result=pcall(function()
+  local asset=game:GetService("AssetService")
+  local img=asset:CreateEditableImage({Size=Vector2.new(16,32)})
+  if not img then return false end
+  local pixels=buffer.create(16*32*4)
+  for y=0,31 do
+   for x=0,15 do
+    local i=(y*16+x)*4
+    local edge=(x<2 or x>13 or y<2 or y>29)
+    local v=((x*17+y*13+math.floor(y/4)*19)%37)
+    buffer.writeu8(pixels,i,edge and 36 or 72+v)
+    buffer.writeu8(pixels,i+1,edge and 35 or 73+v)
+    buffer.writeu8(pixels,i+2,edge and 47 or 103+v)
+    buffer.writeu8(pixels,i+3,255)
+   end
+  end
+  img:WritePixelsBuffer(Vector2.zero,Vector2.new(16,32),pixels)
+  local decal=Instance.new("Decal")
+  decal.Face=Enum.NormalId.Top
+  decal.TextureContent=Content.fromObject(img)
+  decal.Parent=wing
+  return true
+ end)
+ return ok and result==true
+end
+
 local function makeWings()
  local torso=character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
  if not torso then return end
@@ -50,7 +80,8 @@ local function makeWings()
   wing.CFrame=torso.CFrame*CFrame.new(side*0.82,0.12,0.95)*CFrame.Angles(math.rad(12),math.rad(side*18),math.rad(side*10))
   local weld=Instance.new("WeldConstraint")
   weld.Part0=torso; weld.Part1=wing; weld.Parent=wing
-  -- Blocky pixel patches inspired by Minecraft Elytra, no external textures required.
+  -- Fallback geometry for devices without EditableImage permissions.
+  if not tryPixelTexture(wing) then
   for row=1,4 do
    for col=1,2 do
     local patch=Instance.new("Part")
@@ -62,6 +93,7 @@ local function makeWings()
     patch.Parent=wings
     local pw=Instance.new("WeldConstraint",patch); pw.Part0=wing; pw.Part1=patch
    end
+  end
   end
  end
 end
