@@ -26,6 +26,15 @@ local function stop()
  if wings then wings:Destroy(); wings=nil end
  if humanoid then humanoid.AutoRotate=true end
 end
+local function pixel(parent,size,offset,color)
+ local p=Instance.new("Part")
+ p.Size=size; p.Color=color; p.Material=Enum.Material.SmoothPlastic
+ p.CanCollide=false; p.CanTouch=false; p.Massless=true
+ p.CFrame=parent.CFrame*CFrame.new(offset)
+ p.Parent=wings
+ local w=Instance.new("WeldConstraint",p); w.Part0=parent; w.Part1=p
+ return p
+end
 local function makeWings()
  local torso=character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
  if not torso then return end
@@ -41,12 +50,25 @@ local function makeWings()
   wing.CFrame=torso.CFrame*CFrame.new(side*0.82,0.12,0.95)*CFrame.Angles(math.rad(12),math.rad(side*18),math.rad(side*10))
   local weld=Instance.new("WeldConstraint")
   weld.Part0=torso; weld.Part1=wing; weld.Parent=wing
+  -- Blocky pixel patches inspired by Minecraft Elytra, no external textures required.
+  for row=1,4 do
+   for col=1,2 do
+    local patch=Instance.new("Part")
+    patch.Size=Vector3.new(0.56,0.025,0.49)
+    patch.Color3=Color3.fromRGB(58+row*9,48+col*8,76+row*5)
+    patch.Material=Enum.Material.SmoothPlastic
+    patch.CanCollide=false; patch.CanTouch=false; patch.Massless=true
+    patch.CFrame=wing.CFrame*CFrame.new((col-1.5)*0.63,0.085,(row-2.5)*0.53)
+    patch.Parent=wings
+    local pw=Instance.new("WeldConstraint",patch); pw.Part0=wing; pw.Part1=patch
+   end
+  end
  end
 end
 local function start()
  if flying or not root or not humanoid or humanoid.Health<=0 then return end
- if humanoid.FloorMaterial~=Enum.Material.Air then return end
- flying=true; speed=35; button.Text="LAND"
+ -- Take off from the ground as well as in midair.
+ flying=true; speed=35; button.Text="STOP"
  attachment=Instance.new("Attachment",root)
  velocity=Instance.new("LinearVelocity",root)
  velocity.Attachment0=attachment; velocity.MaxForce=100000
@@ -74,7 +96,7 @@ player.CharacterAdded:Connect(setup)
 if player.Character then setup(player.Character) end
 RunService.RenderStepped:Connect(function(dt)
  if not flying or not root or not humanoid or not velocity or not orientation then return end
- if humanoid.FloorMaterial~=Enum.Material.Air then stop(); return end
+ -- Infinite flight: landing does not turn flight off.
  local camera=workspace.CurrentCamera
  if not camera then return end
  local look=camera.CFrame.LookVector
@@ -86,6 +108,7 @@ RunService.RenderStepped:Connect(function(dt)
  direction=direction.Unit
  -- Camera up = climb, camera down = dive. Keep enough lift to gain height.
  local vertical = math.clamp(look.Y * speed * 1.25, -90, 70)
+ if root and root.AssemblyLinearVelocity.Y < 2 and look.Y > -0.1 then vertical=math.max(vertical,22) end
  if look.Y > 0.12 then
   vertical = math.max(vertical, 12 + look.Y * 30)
  end
